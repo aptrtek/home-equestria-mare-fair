@@ -71,13 +71,9 @@ func _process(_delta: float) -> void:
 		# Grass can be rebuilt as the player travels; re-registering an unchanged footprint is free.
 		get_tree().call_group("grass_footprints", "add_exclusion", GRASS_TOKEN, global_transform, Vector2(HALF_X + 0.15, HALF_Z + 0.15))
 		return
-	var exclude: Array[RID] = []
-	for body in find_children("*", "CollisionObject3D", true, false):
-		exclude.append((body as CollisionObject3D).get_rid())
-	var query := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP * 40.0, global_position + Vector3.DOWN * 80.0, 1, exclude)
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if hit.is_empty(): return
-	global_position.y = hit.position.y
+	# The tent stands on its levelled pad (site_pad.gd), so it takes the pad's height rather than
+	# whatever ground a ray finds before the pad has been levelled.
+	global_position.y = POSE.y
 	_landed = true
 
 
@@ -132,7 +128,9 @@ func _shell() -> void:
 	_wall(body, Vector3(-(gap + side), EAVES * 0.5, -z), Vector3(side * 2.0, EAVES, 0.15))
 	_wall(body, Vector3(gap + side, EAVES * 0.5, -z), Vector3(side * 2.0, EAVES, 0.15))
 	_frame()
-	FITTINGS.box(self, Vector3(0, FLOOR_TOP * 0.5 - 0.1, 0), Vector3(x * 2.0, FLOOR_TOP + 0.2, z * 2.0), WOOD, true)
+	# The floorboards. Their solid goes on the walls' body: a shape under a plain node collides with nothing.
+	FITTINGS.box(self, Vector3(0, FLOOR_TOP * 0.5 - 0.1, 0), Vector3(x * 2.0, FLOOR_TOP + 0.2, z * 2.0), WOOD)
+	_wall(body, Vector3(0, FLOOR_TOP * 0.5 - 0.1, 0), Vector3(x * 2.0, FLOOR_TOP + 0.2, z * 2.0))
 	var light := OmniLight3D.new()
 	light.position = Vector3(0, 2.5, 0)
 	light.light_color = Color(1.0, 0.86, 0.68)

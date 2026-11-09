@@ -92,17 +92,9 @@ func _basket() -> void:
 
 func _snap_to_ground() -> void:
 	if not is_inside_tree(): return
-	var world := get_world_3d()
-	if world == null: return
-	var exclude: Array[RID] = []
-	for body in find_children("*", "CollisionObject3D", true, false):
-		exclude.append((body as CollisionObject3D).get_rid())
-	if _body != null: exclude.append(_body.get_rid())
-	var from := global_position + Vector3.UP * 40.0
-	var query := PhysicsRayQueryParameters3D.create(from, global_position + Vector3.DOWN * 80.0, 1, exclude)
-	var hit := world.direct_space_state.intersect_ray(query)
-	if hit.is_empty(): return
-	global_position.y = hit.position.y
+	# The balloon stands on its levelled pad (site_pad.gd): the pad's height, not the first ground a
+	# ray finds before the pad has been levelled.
+	global_position.y = POSE.y
 	_grounded = true
 
 
