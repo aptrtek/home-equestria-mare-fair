@@ -3,6 +3,8 @@ extends Node
 ## existing save the first time. A fresh world already has them from the merged roster.
 
 const BALLOON := preload("res://mods/mare_fair/balloon.gd")
+const TENT := preload("res://mods/mare_fair/tent.gd")
+const SITE := preload("res://mods/mare_fair/site_pad.gd")
 const PONY := "res://world/characters/background/background_pony.gd"
 const GLASSES := "res://world/characters/background/accessories/vinyl_glasses.scn"
 const IDS: Array[String] = ["fair_flyer", "soiree", "matinee", "morning_mimosa", "fun_raiser"]
@@ -27,6 +29,8 @@ const WEAR := {
 const OUTLINE := "res://mods/mare_fair/accessories/outline.gdshader"
 const OWN_WEAR := "MareFairWear"
 var _poll := 0.0
+var _site_done := false
+var _site_terrain: Object
 var _sister_check := 0.0
 var _dressed: Dictionary = {}
 
@@ -42,6 +46,8 @@ func _process(delta: float) -> void:
 	_poll -= delta
 	if _poll <= 0.0:
 		_poll = 1.0
+		if is_instance_valid(Mods.game): _park(Mods.game)
+		_level_site()
 		_keep_out_of_houses()
 		_sync_wear()
 	_sister_check -= delta
@@ -104,14 +110,47 @@ func _keep_out_of_houses() -> void:
 	if not is_instance_valid(population): return
 	var houses: Variant = population.get("houses")
 	if not houses is Dictionary: return
-	var removed := false
+	var tent_up := false
+	for house: Node in get_tree().get_nodes_in_group("house_interiors"):
+		if house.has_method("place_id") and str(house.call("place_id")) == TENT.PLACE_ID: tent_up = true
+	var changed := false
 	for id: String in IDS:
-		if (houses as Dictionary).erase(id): removed = true
-	if not removed: return
+		if tent_up and str((houses as Dictionary).get(id, "")) != TENT.PLACE_ID:
+			houses[id] = TENT.PLACE_ID
+			changed = true
+		elif not tent_up and (houses as Dictionary).erase(id):
+			changed = true
+	if tent_up: _share_tent(game)
+	if not changed: return
 	population.set("_houses_version", int(population.get("_houses_version")) + 1)
 	for house: Node in get_tree().get_nodes_in_group("house_interiors"):
 		if house.has_method("set_sleepers"): house.call("set_sleepers", population.call("residents_of", house.call("place_id")))
 	preload("res://world/save_file.gd").write(str(population.get("config_path")).get_base_dir().path_join("homes.json"), houses)
+
+
+## Terrain regions reload from disk as they stream, so the pads are redone whenever one arrives.
+func _level_site() -> void:
+	var world_terrain: Variant = WorldTerrain.instance
+	if not is_instance_valid(world_terrain): return
+	var terrain: Object = world_terrain.get("terrain")
+	if terrain == null: return
+	if terrain != _site_terrain:
+		_site_terrain = terrain
+		_site_done = false
+		if world_terrain.has_signal("regions_loaded"): world_terrain.regions_loaded.connect(func(_regions: Variant) -> void: _site_done = false)
+	if not _site_done: _site_done = SITE.apply(terrain)
+
+
+## While the player and Soirée are married, the tent is their shared home, with the first bed.
+func _share_tent(game: Node) -> void:
+	var runtime: Variant = game.get("relationship_runtime")
+	if not is_instance_valid(runtime): return
+	var bonds: Node = runtime.get("bonds")
+	var record: Dictionary = bonds.record_for(WIFE)
+	if str(record.stage) != "married" or not str(record.shared_home_id).is_empty(): return
+	record.shared_home_id = TENT.PLACE_ID
+	bonds._save(WIFE, record)
+	if runtime.has_method("_apply_household"): runtime.call("_apply_household", WIFE)
 
 
 ## Once per world: the mares own their hat and glasses, as the game's gifts.
@@ -249,6 +288,7 @@ func _park(game: Node) -> void:
 	var town := game.get_node_or_null("Zones/PonyvilleTown")
 	if town == null: return
 	BALLOON.attach(town)
+	TENT.attach(town)
 
 
 func _enroll(game: Node) -> void:

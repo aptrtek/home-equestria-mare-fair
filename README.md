@@ -97,3 +97,6 @@ The Mare Fair mascots belong to Snowpity Inc. This is an unofficial fan
 mod. Colours, bios, cutie marks and hair are based on the public art on
 [marefair.org](https://marefair.org/mascots/). The cutie marks are that site's public vectors. The
 reference pictures are not included. The 3D hair and accessories are original to this mod.
+
+The mares' personalities draw on the
+[Mare Fair character card by SS](https://mlpchag.neocities.org/view?card=SS/Mare%20Fair.png).
