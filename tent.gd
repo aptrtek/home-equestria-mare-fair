@@ -127,6 +127,7 @@ func _shell() -> void:
 	_wall(body, Vector3(-x, EAVES * 0.5, 0), Vector3(0.15, EAVES, z * 2.0))
 	_wall(body, Vector3(-(gap + side), EAVES * 0.5, -z), Vector3(side * 2.0, EAVES, 0.15))
 	_wall(body, Vector3(gap + side, EAVES * 0.5, -z), Vector3(side * 2.0, EAVES, 0.15))
+	_roof(body, x, z)
 	_frame()
 	# The floorboards. Their solid goes on the walls' body: a shape under a plain node collides with nothing.
 	FITTINGS.box(self, Vector3(0, FLOOR_TOP * 0.5 - 0.1, 0), Vector3(x * 2.0, FLOOR_TOP + 0.2, z * 2.0), WOOD)
@@ -226,6 +227,22 @@ a mascot"
 	text.shaded = true
 	text.position = Vector3(0, 0, 0.01)
 	paper.add_child(text)
+
+
+## The roof as a hollow skin over the outer canvas: solid from above and below, open inside.
+func _roof(body: StaticBody3D, x: float, z: float) -> void:
+	var peak := Vector3(0, PEAK, 0)
+	var corners := [Vector3(-x, EAVES, z), Vector3(x, EAVES, z), Vector3(x, EAVES, -z), Vector3(-x, EAVES, -z)]
+	var faces := PackedVector3Array()
+	for i in 4:
+		faces.append_array([corners[i], corners[(i + 1) % 4], peak])
+	var roof := ConcavePolygonShape3D.new()
+	roof.backface_collision = true
+	roof.set_faces(faces)
+	var shape := CollisionShape3D.new()
+	shape.name = "Roof"
+	shape.shape = roof
+	body.add_child(shape)
 
 
 func _wall(body: StaticBody3D, at: Vector3, size: Vector3) -> void:
