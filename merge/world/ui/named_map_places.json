@@ -1,0 +1,11 @@
+{
+  "places": [
+    {
+      "id": "landmark:mare_fair_tent",
+      "kind": "landmark",
+      "name": "Mare Fair Tent",
+      "x": 187.0,
+      "z": -346.5
+    }
+  ]
+}

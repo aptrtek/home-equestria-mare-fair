@@ -1,8 +1,8 @@
 # Mare Fair
 
 A mod for [Home: Equestria](https://github.com/homedevanon/home-equestria) that brings the five
-[Mare Fair](https://marefair.org/mascots/) mascots to Ponyville. They gather at their own parked
-balloon on Balloon Hill, keep daily schedules, and talk through the game's AI ponies.
+[Mare Fair](https://marefair.org/mascots/) mascots to Ponyville. They camp by the road on the
+edge of town in a big striped tent beside their own parked balloon, keep daily schedules, and talk through the game's AI ponies.
 
 Built for game version `0.3.0-maredev`. With the mod switched off, Ponyville is unchanged.
 
@@ -10,8 +10,8 @@ Built for game version `0.3.0-maredev`. With the mod switched off, Ponyville is 
 
 ## Download
 
-- **[mare_fair.pck](https://github.com/aptrtek/home-equestria/releases/download/mare-fair-v1.2.1/mare_fair.pck)**: the mod itself. This is the only file players need.
-- **[mare_fair_source.zip](https://github.com/aptrtek/home-equestria/releases/download/mare-fair-v1.2.1/mare_fair_source.zip)**: just the mod's source folder, for anyone who wants to change it.
+- **[mare_fair.pck](https://github.com/aptrtek/home-equestria-mare-fair/releases/latest/download/mare_fair.pck)**: the mod itself. This is the only file players need.
+- **[mare_fair_source.zip](https://github.com/aptrtek/home-equestria-mare-fair/releases/latest/download/mare_fair_source.zip)**: just the mod's source folder, for anyone who wants to change it.
 
 > **Versions 1.1.0 and 1.2.0 do not work on the packaged game.** They stop it from loading. Use 1.2.1 or newer.
 
@@ -29,7 +29,7 @@ Not on the models yet: outfits
 
 ## Install
 
-1. Download [mare_fair.pck](https://github.com/aptrtek/home-equestria/releases/download/mare-fair-v1.2.1/mare_fair.pck).
+1. Download [mare_fair.pck](https://github.com/aptrtek/home-equestria-mare-fair/releases/latest/download/mare_fair.pck).
 2. Put it in your mods folder. **Settings → Mods → Open mods folder** opens it for you.
    On Windows that is `%APPDATA%\home-equestria-public\mods\`.
 3. Restart the game. The mod is listed under **Settings → Mods**.
@@ -38,7 +38,11 @@ Mods are programs, so only install them from people you trust.
 
 ## Meeting them
 
-They live at the Mare Fair balloon on Balloon Hill, a repainted copy of the town's balloon that stays parked. They take no houses in Ponyville, so nopony who lives there is moved or has to share. From the console you can also bring one to you:
+They live at the **Mare Fair Tent**, marked on the map, by the road on the edge of town. The tent is striped like their balloon, which is parked beside it: a repainted copy of the town's balloon that stays put. Inside are three double beds, a lamp on the table, and a poster somepony keeps putting up. They take no houses in Ponyville, so nopony who lives there is moved or has to share. While you are married to Soirée, the tent is your home too, and you share the first bed.
+
+![The Mare Fair Tent and balloon by the road at night](docs/tent.jpg)
+
+From the console you can also bring one to you:
 
 ```
 spawn fair flyer
@@ -60,6 +64,8 @@ honest version: she will tell them she is married, and turn them down.
 ## Hats and glasses
 
 Fair Flyer's sun hat and Morning Mimosa's and Fun Raiser's glasses are worn by default. Ask them to take one off or put it back on and they can decide to, and the world remembers.
+
+You can also take one off by hand and carry it. On desktop, look at it and press **Y**. In VR, put a free hand at her head and pull the trigger. Do the same while holding it to put it back, or hand it to her as a gift. Taking it without asking is up to her: a friend may laugh, and anypony else will mind. A sleeping pony who trusts you stays asleep. One who doesn't wakes up cross and keeps it.
 
 ## Working on the mod
 
@@ -97,3 +103,6 @@ The Mare Fair mascots belong to Snowpity Inc. This is an unofficial fan
 mod. Colours, bios, cutie marks and hair are based on the public art on
 [marefair.org](https://marefair.org/mascots/). The cutie marks are that site's public vectors. The
 reference pictures are not included. The 3D hair and accessories are original to this mod.
+
+The mares' personalities draw on the
+[Mare Fair character card by SS](https://mlpchag.neocities.org/view?card=SS/Mare%20Fair.png).

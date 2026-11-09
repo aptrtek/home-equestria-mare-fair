@@ -3,6 +3,8 @@ extends Node
 ## existing save the first time. A fresh world already has them from the merged roster.
 
 const BALLOON := preload("res://mods/mare_fair/balloon.gd")
+const TENT := preload("res://mods/mare_fair/tent.gd")
+const SITE := preload("res://mods/mare_fair/site_pad.gd")
 const PONY := "res://world/characters/background/background_pony.gd"
 const GLASSES := "res://world/characters/background/accessories/vinyl_glasses.scn"
 const IDS: Array[String] = ["fair_flyer", "soiree", "matinee", "morning_mimosa", "fun_raiser"]
@@ -21,17 +23,21 @@ const SISTER_KNOWS := "\n\nSoirée and aperture_tech are married. Matinée is th
 ## the AI's take_off and put_on, and their own models are drawn in place of those items.
 const WEAR := {
 	"fair_flyer": ["cowpony-hat", "res://mods/mare_fair/accessories/sun_hat.glb"],
-	"morning_mimosa": ["cat-eye-glasses", "res://mods/mare_fair/accessories/spiral_glasses.glb"],
+	"morning_mimosa": ["aviators", "res://mods/mare_fair/accessories/spiral_glasses.glb"],
 	"fun_raiser": ["cat-eye-glasses", "res://mods/mare_fair/accessories/half_moon_glasses.glb"],
 }
 const OUTLINE := "res://mods/mare_fair/accessories/outline.gdshader"
 const OWN_WEAR := "MareFairWear"
 var _poll := 0.0
+var _site_done := false
+var _site_terrain: Object
+var _world_terrain: Node
 var _sister_check := 0.0
 var _dressed: Dictionary = {}
 
 
 func _ready() -> void:
+	add_child(preload("res://mods/mare_fair/hand_wear.gd").new())
 	Mods.on_node(PONY, _dress)
 	Mods.world_ready.connect(_on_world)
 	if is_instance_valid(Mods.game): _on_world(Mods.game)
@@ -41,6 +47,8 @@ func _process(delta: float) -> void:
 	_poll -= delta
 	if _poll <= 0.0:
 		_poll = 1.0
+		if is_instance_valid(Mods.game): _park(Mods.game)
+		_level_site()
 		_keep_out_of_houses()
 		_sync_wear()
 	_sister_check -= delta
@@ -103,19 +111,63 @@ func _keep_out_of_houses() -> void:
 	if not is_instance_valid(population): return
 	var houses: Variant = population.get("houses")
 	if not houses is Dictionary: return
-	var removed := false
+	var tent_up := false
+	for house: Node in get_tree().get_nodes_in_group("house_interiors"):
+		if house.has_method("place_id") and str(house.call("place_id")) == TENT.PLACE_ID: tent_up = true
+	var changed := false
 	for id: String in IDS:
-		if (houses as Dictionary).erase(id): removed = true
-	if not removed: return
+		if tent_up and str((houses as Dictionary).get(id, "")) != TENT.PLACE_ID:
+			houses[id] = TENT.PLACE_ID
+			changed = true
+		elif not tent_up and (houses as Dictionary).erase(id):
+			changed = true
+	if tent_up: _share_tent(game)
+	_keep_player_in_tent()
+	if not changed: return
 	population.set("_houses_version", int(population.get("_houses_version")) + 1)
 	for house: Node in get_tree().get_nodes_in_group("house_interiors"):
 		if house.has_method("set_sleepers"): house.call("set_sleepers", population.call("residents_of", house.call("place_id")))
 	preload("res://world/save_file.gd").write(str(population.get("config_path")).get_base_dir().path_join("homes.json"), houses)
 
 
+## Terrain regions reload from disk as they stream, so the pads are redone whenever one arrives.
+func _level_site() -> void:
+	if not is_instance_valid(_world_terrain): _world_terrain = get_tree().root.find_child("WorldTerrain", true, false)
+	var world_terrain: Variant = _world_terrain
+	if not is_instance_valid(world_terrain): return
+	var terrain: Object = world_terrain.get("terrain")
+	if terrain == null: return
+	if terrain != _site_terrain:
+		_site_terrain = terrain
+		_site_done = false
+		if world_terrain.has_signal("regions_loaded"): world_terrain.regions_loaded.connect(func(_regions: Variant) -> void: _site_done = false)
+	if not _site_done: _site_done = SITE.apply(terrain)
+
+
+## Population refreshes list residents only, so a married player is put back in the first bed.
+func _keep_player_in_tent() -> void:
+	for house: Node in get_tree().get_nodes_in_group("house_interiors"):
+		if not house.has_method("place_id") or str(house.call("place_id")) != TENT.PLACE_ID: continue
+		var sleepers: Array = house.get("_sleepers")
+		if house.has_meta("player_partner") and "player" not in sleepers: house.call("set_sleepers", sleepers + ["player"])
+
+
+## While the player and Soirée are married, the tent is their shared home, with the first bed.
+func _share_tent(game: Node) -> void:
+	var runtime: Variant = game.get("relationship_runtime")
+	if not is_instance_valid(runtime): return
+	var bonds: Node = runtime.get("bonds")
+	var record: Dictionary = bonds.record_for(WIFE)
+	if str(record.stage) != "married" or not str(record.shared_home_id).is_empty(): return
+	record.shared_home_id = TENT.PLACE_ID
+	bonds._save(WIFE, record)
+	if runtime.has_method("_apply_household"): runtime.call("_apply_household", WIFE)
+
+
 ## Once per world: the mares own their hat and glasses, as the game's gifts.
 func _give_wear(game: Node) -> void:
 	var state: Dictionary = Mods.state("mare_fair")
+	_separate_glasses(game, state)
 	if bool(state.get("wear_given", false)): return
 	var wardrobe: Variant = game.get("wardrobe")
 	if not is_instance_valid(wardrobe) or game.get("world_context") == null or game.world_context._read_only: return
@@ -128,6 +180,26 @@ func _give_wear(game: Node) -> void:
 			gifts[id] = list
 	state["wear_given"] = true
 	Mods.save_changed()
+
+
+## Morning Mimosa's stand-in changed, so each mare's piece can be told apart when it is carried.
+func _separate_glasses(game: Node, state: Dictionary) -> void:
+	if bool(state.get("glasses_separated", false)): return
+	var wardrobe: Variant = game.get("wardrobe")
+	if not is_instance_valid(wardrobe) or game.get("world_context") == null or game.world_context._read_only: return
+	var gifts: Dictionary = wardrobe.call("gifts")
+	var list: Array = gifts.get("morning_mimosa", [])
+	if "wear:cat-eye-glasses:0" in list:
+		list.erase("wear:cat-eye-glasses:0")
+		list.append("wear:aviators:0")
+		gifts["morning_mimosa"] = list
+	var off: Dictionary = wardrobe.call("taken_off")
+	var taken: Array = off.get("morning_mimosa", [])
+	if "cat-eye-glasses" in taken:
+		taken.erase("cat-eye-glasses")
+		taken.append("aviators")
+		off["morning_mimosa"] = taken
+	state["glasses_separated"] = true
 
 
 ## Draws each mare's own model while the game has its stand-in item on her.
@@ -170,6 +242,8 @@ func _attach_wear(skeleton: Skeleton3D, path: String) -> void:
 	if piece is MeshInstance3D: meshes.append(piece)
 	for mesh: MeshInstance3D in meshes:
 		for surface in mesh.mesh.get_surface_count():
+			# Only the frame of the spiral glasses is outlined; the lens and spiral stay clean.
+			if surface > 0 and path.ends_with("spiral_glasses.glb"): continue
 			var material: Material = mesh.mesh.surface_get_material(surface).duplicate()
 			material.next_pass = line
 			mesh.set_surface_override_material(surface, material)
@@ -225,6 +299,7 @@ func _park(game: Node) -> void:
 	var town := game.get_node_or_null("Zones/PonyvilleTown")
 	if town == null: return
 	BALLOON.attach(town)
+	TENT.attach(town)
 
 
 func _enroll(game: Node) -> void:
