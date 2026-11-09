@@ -1,4 +1,5 @@
 shader_type spatial;
+render_mode cull_disabled;
 // Vertical gores, matching the visible Mare Fair balloon
 // (https://2025.marefair.org/_astro/mf_desktop.iPluWSMU_EDpGb.png).
 // Stripes follow the angle around the model, so they need no particular UVs.
