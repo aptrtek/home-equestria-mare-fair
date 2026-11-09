@@ -25,8 +25,7 @@ Built for game version `0.3.0-maredev`. With the mod switched off, Ponyville is 
 | **Morning Mimosa** | Earth pony | Green mane, leafy braids tied with oranges, round spiral glasses | Eccentric |
 | **Fun Raiser** | Unicorn | Orange ponytail and curls with a pale streak, gold half-moon reading glasses | Introduces ponies who need something to each other |
 
-Not on the models yet: their outfits, Fair Flyer's purple belly, Morning Mimosa's gold bangles,
-and Fun Raiser's jacket and pendant.
+Not on the models yet: outfits
 
 ## Install
 
@@ -57,13 +56,6 @@ a free local model through [Ollama](https://ollama.com) (`http://127.0.0.1:11434
 The ponies know you by the `player_name` in your `ai_config.json`, which on Windows is in
 `%APPDATA%\home-equestria-public\`. Soirée is married to aperture_tech. Anyone else gets the
 honest version: she will tell them she is married, and turn them down.
-
-A new world named for aperture_tech starts already married to her. To earn her hoof instead, create
-`mods\data\mare_fair\settings.json` in that same folder before starting the world:
-
-```json
-{ "start_married_to_soiree": false }
-```
 
 ## Hats and glasses
 
