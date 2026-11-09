@@ -1,5 +1,5 @@
 extends Node3D
-## Parked Mare Fair balloon on Balloon Hill, where the five mascots gather.
+## Parked Mare Fair balloon beside the crew's tent, where the five mascots gather.
 ## Twilight's balloon stays the flyable one. This one does not lift: no helm, no burner.
 ## Shape and colours follow the 2025 desktop art: red and light-blue vertical gores,
 ## a red basket, and a light-blue star. The top of that picture is cropped, so the
@@ -16,7 +16,7 @@ const BASKET_SURFACES: Array[int] = [1, 6, 7, 8, 10]
 const STAR_SURFACES: Array[int] = [0, 5]
 const SPOT_ID := "mare_fair_balloon"
 ## On a levelled pad beside the crew's lodge tent (site_pad.gd), away from the hilltop's other tents.
-const POSE := Vector3(232.0, -1.7, -307.0)
+const POSE := Vector3(199.5, -1.05, -345.0)
 ## Door faces back toward Twilight's balloon and the hill path.
 const YAW := -2.15
 var _body: StaticBody3D

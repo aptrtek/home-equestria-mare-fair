@@ -2,19 +2,16 @@ extends Node3D
 ## The Mare Fair crew's lodge tent beside their balloon, a real home with three double beds. The
 ## game puts two sleepers in each bed, the player and his partner in the first. Striped like the
 ## balloon. The door faces -Z. Built in code, and modelled on Trixie's wagon
-## (world/buildings/trixie_wagon.gd).
+## (world/buildings/trixie_wagon.gd). Its HouseInterior is the game's own authored home script,
+## made directly: mod scripts must never extend a game script, which breaks the packaged game.
 
-class TentHome extends "res://world/buildings/authored_home.gd":
-	func _init() -> void: home_kind = "mare_fair_tent"
-
-	## Population refreshes list residents only; a married player keeps the first bed with her.
-	func set_sleepers(ids: Array) -> void:
-		var everyone := ids.duplicate()
-		if has_meta("player_partner") and "player" not in everyone: everyone.append("player")
-		super(everyone)
-
+const HOME_SCRIPT := "res://world/buildings/authored_home.gd"
+const HOME_KIND := "mare_fair_tent"
+const DOORWAY_SCRIPT := "res://world/buildings/open_doorway.gd"
 const PLACE_ID := "house:mare_fair_tent"
-const POSE := Vector3(220.0, -3.6, -300.0)
+## Beside the road on the town side of the hill, the front wall parallel to it and the door facing it.
+const POSE := Vector3(187.0, -1.7, -346.5)
+const YAW := 2.93
 const STRIPES := preload("res://mods/mare_fair/envelope.gdshader")
 const FITTINGS := preload("res://world/vehicles/balloon/basket.gd")
 const DOUBLE_BED := "res://world/props/household/double-pony-bed.glb"
@@ -31,6 +28,14 @@ const GRASS_TOKEN := "mare_fair:tent"
 const WOOD := Color(0.72, 0.55, 0.36)
 const TIMBER := Color(0.42, 0.27, 0.15)
 const BEAM := 0.18
+## The canvas is two skins this far apart, so the walls and door edges have some thickness.
+const CANVAS := 0.08
+const POLE_RADIUS := 0.07
+const TABLE := "res://world/buildings/fluttershy/interior/round_table.glb"
+const TABLE_SCALE := 1.5
+const TABLE_TOP := 0.537
+const TABLE_AT := Vector3(2.9, 0.0, -2.5)
+const LAMP := "res://world/props/lamps/kit_lamp.gd"
 ## The same size and even scale as the game's own house beds (house_beds.gd).
 const BED_SIZE := Vector3(2.05, 1.1, 2.1)
 const BED_SCALE := Vector3(2.1, 2.1, 2.1)
@@ -45,10 +50,12 @@ static func attach(town: Node) -> void:
 	node.name = "MareFairTent"
 	town.add_child(node)
 	node.global_position = POSE
+	node.rotation.y = YAW
 
 
 func _ready() -> void:
 	_shell()
+	_furnish()
 	_add_home()
 	_poster()
 	set_process(true)
@@ -97,27 +104,20 @@ func _shell() -> void:
 	var x := HALF_X
 	var z := HALF_Z
 	var gap := DOOR_WIDTH * 0.5
-	# Back and sides.
-	_quad(tool, Vector3(x, 0, z), Vector3(-x, 0, z), Vector3(-x, EAVES, z), Vector3(x, EAVES, z))
-	_quad(tool, Vector3(x, 0, -z), Vector3(x, 0, z), Vector3(x, EAVES, z), Vector3(x, EAVES, -z))
-	_quad(tool, Vector3(-x, 0, z), Vector3(-x, 0, -z), Vector3(-x, EAVES, -z), Vector3(-x, EAVES, z))
-	# Front, around the door.
-	_quad(tool, Vector3(-x, 0, -z), Vector3(-gap, 0, -z), Vector3(-gap, EAVES, -z), Vector3(-x, EAVES, -z))
-	_quad(tool, Vector3(gap, 0, -z), Vector3(x, 0, -z), Vector3(x, EAVES, -z), Vector3(gap, EAVES, -z))
-	_quad(tool, Vector3(-gap, DOOR_HEIGHT, -z), Vector3(gap, DOOR_HEIGHT, -z), Vector3(gap, EAVES, -z), Vector3(-gap, EAVES, -z))
-	# Roof, to one peak.
-	var peak := Vector3(0, PEAK, 0)
-	var corners := [Vector3(-x, EAVES, z), Vector3(x, EAVES, z), Vector3(x, EAVES, -z), Vector3(-x, EAVES, -z)]
-	for i in 4:
-		var a: Vector3 = corners[i]
-		var b: Vector3 = corners[(i + 1) % 4]
-		_triangle(tool, a, b, peak)
+	_skin(tool, x, z, EAVES, PEAK)
+	_skin(tool, x - CANVAS, z - CANVAS, EAVES - CANVAS * 0.5, PEAK - CANVAS * 1.5)
+	# The door's edges, joining the two skins.
+	var inner := z - CANVAS
+	_quad(tool, Vector3(-gap, 0, -z), Vector3(-gap, 0, -inner), Vector3(-gap, DOOR_HEIGHT, -inner), Vector3(-gap, DOOR_HEIGHT, -z))
+	_quad(tool, Vector3(gap, 0, -inner), Vector3(gap, 0, -z), Vector3(gap, DOOR_HEIGHT, -z), Vector3(gap, DOOR_HEIGHT, -inner))
+	_quad(tool, Vector3(-gap, DOOR_HEIGHT, -z), Vector3(gap, DOOR_HEIGHT, -z), Vector3(gap, DOOR_HEIGHT, -inner), Vector3(-gap, DOOR_HEIGHT, -inner))
 	var mesh := MeshInstance3D.new()
 	mesh.name = "Canvas"
 	mesh.mesh = tool.commit()
 	var material := ShaderMaterial.new()
 	material.shader = STRIPES
 	material.set_shader_parameter("stripe_count", 16.0)
+	material.set_shader_parameter("canvas", 1.0)
 	mesh.material_override = material
 	add_child(mesh)
 	var body := StaticBody3D.new()
@@ -136,14 +136,59 @@ func _shell() -> void:
 	var light := OmniLight3D.new()
 	light.position = Vector3(0, 2.5, 0)
 	light.light_color = Color(1.0, 0.86, 0.68)
-	light.light_energy = 0.9
+	# A soft fill; the lantern on the table is the real light.
+	light.light_energy = 0.45
 	light.omni_range = 8.0
 	add_child(light)
 
 
-## A timber frame inside the canvas: a post in each corner, joined by beams along the top.
+## One skin of canvas: walls with the door cut out of the front, and a roof rising to one peak.
+func _skin(tool: SurfaceTool, x: float, z: float, eaves: float, peak_y: float) -> void:
+	var gap := DOOR_WIDTH * 0.5
+	# Back and sides.
+	_quad(tool, Vector3(x, 0, z), Vector3(-x, 0, z), Vector3(-x, eaves, z), Vector3(x, eaves, z))
+	_quad(tool, Vector3(x, 0, -z), Vector3(x, 0, z), Vector3(x, eaves, z), Vector3(x, eaves, -z))
+	_quad(tool, Vector3(-x, 0, z), Vector3(-x, 0, -z), Vector3(-x, eaves, -z), Vector3(-x, eaves, z))
+	# Front, around the door.
+	_quad(tool, Vector3(-x, 0, -z), Vector3(-gap, 0, -z), Vector3(-gap, eaves, -z), Vector3(-x, eaves, -z))
+	_quad(tool, Vector3(gap, 0, -z), Vector3(x, 0, -z), Vector3(x, eaves, -z), Vector3(gap, eaves, -z))
+	_quad(tool, Vector3(-gap, DOOR_HEIGHT, -z), Vector3(gap, DOOR_HEIGHT, -z), Vector3(gap, eaves, -z), Vector3(-gap, eaves, -z))
+	var peak := Vector3(0, peak_y, 0)
+	var corners := [Vector3(-x, eaves, z), Vector3(x, eaves, z), Vector3(x, eaves, -z), Vector3(-x, eaves, -z)]
+	for i in 4:
+		_triangle(tool, corners[i], corners[(i + 1) % 4], peak)
+
+
+## The game's round table in the front corner, with a lamp from the game's kit on it. The lamp
+## moves into the home once it exists (_add_home), so the crew switch it like any household.
+func _furnish() -> void:
+	var table: Node3D = (load(TABLE) as PackedScene).instantiate()
+	table.name = "Table"
+	table.scale = Vector3.ONE * TABLE_SCALE
+	table.position = Vector3(TABLE_AT.x, FLOOR_TOP, TABLE_AT.z)
+	add_child(table)
+	var body := StaticBody3D.new()
+	body.name = "TableBody"
+	body.collision_mask = 0
+	var shape := CollisionShape3D.new()
+	var cylinder := CylinderShape3D.new()
+	cylinder.radius = 0.464 * TABLE_SCALE
+	cylinder.height = TABLE_TOP * TABLE_SCALE
+	shape.shape = cylinder
+	shape.position = Vector3(TABLE_AT.x, FLOOR_TOP + cylinder.height * 0.5, TABLE_AT.z)
+	body.add_child(shape)
+	add_child(body)
+	var lamp: Variant = (load(LAMP) as Script).call("create", "table_lamp")
+	if lamp is Node3D:
+		(lamp as Node3D).name = "Lantern"
+		(lamp as Node3D).position = Vector3(TABLE_AT.x, FLOOR_TOP + TABLE_TOP * TABLE_SCALE, TABLE_AT.z)
+		add_child(lamp)
+
+
+## A timber frame inside the canvas: a post in each corner, joined by beams along the top, and a
+## centre pole holding up the peak.
 func _frame() -> void:
-	var inset := BEAM * 0.5 + 0.04
+	var inset := BEAM * 0.5 + 0.04 + CANVAS
 	var x := HALF_X - inset
 	var z := HALF_Z - inset
 	var height := EAVES - FLOOR_TOP
@@ -155,11 +200,12 @@ func _frame() -> void:
 		FITTINGS.box(self, Vector3(0, top, sz * z), Vector3(x * 2.0 + BEAM, BEAM, BEAM), TIMBER)
 	for sx: float in [-1.0, 1.0]:
 		FITTINGS.box(self, Vector3(sx * x, top, 0), Vector3(BEAM, BEAM, z * 2.0 + BEAM), TIMBER)
+	FITTINGS.rod(self, Vector3(0, FLOOR_TOP, 0), Vector3(0, PEAK - CANVAS * 1.5, 0), POLE_RADIUS, TIMBER)
 
 
 ## Somepony keeps asking.
 func _poster() -> void:
-	var at := Vector3(2.9, 1.65, HALF_Z - 0.03)
+	var at := Vector3(2.9, 1.65, HALF_Z - CANVAS - 0.03)
 	var paper := MeshInstance3D.new()
 	paper.name = "GatorPoster"
 	var quad := QuadMesh.new()
@@ -221,7 +267,14 @@ func _bed(home: Node3D, path: String, at: Vector3, yaw: float, slot: String, sid
 
 
 func _add_home() -> void:
-	var home: Node3D = TentHome.new()
+	# House travel asks the home's parent for its "FrontDoor"; an open flap always lets ponies by.
+	if get_node_or_null("FrontDoor") == null:
+		var door := Node.new()
+		door.name = "FrontDoor"
+		door.set_script(load(DOORWAY_SCRIPT))
+		add_child(door)
+	var home: Node3D = (load(HOME_SCRIPT) as Script).new() as Node3D
+	home.set("home_kind", HOME_KIND)
 	home.name = "HouseInterior"
 	home.furnish = false
 	home.transform = Transform3D(Basis(Vector3.UP, PI).scaled(Vector3.ONE * 10.0), Vector3.ZERO)
@@ -237,3 +290,6 @@ func _add_home() -> void:
 	home._extra_beds.append(_bed(home, DOUBLE_BED, Vector3(HALF_X - 1.25, 0.0, 0.3), -PI * 0.5, "lodge_right", Vector3(clear, 0, 0)))
 	home._extra_beds.append(_bed(home, DOUBLE_BED, Vector3(-HALF_X + 1.25, 0.0, 0.3), PI * 0.5, "lodge_left", Vector3(clear, 0, 0)))
 	add_child(home)
+	# The household lamps runtime only switches lamps inside a house's own node.
+	var lantern := get_node_or_null("Lantern")
+	if lantern != null: lantern.reparent(home)
