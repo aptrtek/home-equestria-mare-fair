@@ -48,6 +48,7 @@ static func attach(town: Node) -> void:
 func _ready() -> void:
 	_shell()
 	_add_home()
+	_poster()
 	set_process(true)
 
 
@@ -129,6 +130,33 @@ func _shell() -> void:
 	light.light_energy = 0.9
 	light.omni_range = 8.0
 	add_child(light)
+
+
+## Somepony keeps asking.
+func _poster() -> void:
+	var at := Vector3(2.9, 1.65, HALF_Z - 0.03)
+	var paper := MeshInstance3D.new()
+	paper.name = "GatorPoster"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1.3, 0.95)
+	paper.mesh = quad
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.93, 0.87, 0.72)
+	paper.material_override = material
+	paper.position = at
+	paper.rotation.y = PI
+	add_child(paper)
+	var text := Label3D.new()
+	text.text = "gator mare is
+NOT
+a mascot"
+	text.font_size = 72
+	text.outline_size = 0
+	text.pixel_size = 0.0027
+	text.modulate = Color(0.32, 0.08, 0.08)
+	text.shaded = true
+	text.position = Vector3(0, 0, 0.01)
+	paper.add_child(text)
 
 
 func _wall(body: StaticBody3D, at: Vector3, size: Vector3) -> void:
