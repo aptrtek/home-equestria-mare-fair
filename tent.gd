@@ -29,6 +29,8 @@ const DOOR_HEIGHT := 2.2
 const FLOOR_TOP := 0.05
 const GRASS_TOKEN := "mare_fair:tent"
 const WOOD := Color(0.72, 0.55, 0.36)
+const TIMBER := Color(0.42, 0.27, 0.15)
+const BEAM := 0.18
 ## The same size and even scale as the game's own house beds (house_beds.gd).
 const BED_SIZE := Vector3(2.05, 1.1, 2.1)
 const BED_SCALE := Vector3(2.1, 2.1, 2.1)
@@ -73,8 +75,18 @@ func _process(_delta: float) -> void:
 
 
 func _quad(tool: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
-	var normal := (b - a).cross(d - a).normalized()
-	for point: Vector3 in [a, b, c, a, c, d]:
+	_triangle(tool, a, b, c)
+	_triangle(tool, a, c, d)
+
+
+## One outward-facing triangle. The shader draws both sides and lights the inside as facing in.
+func _triangle(tool: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
+	var normal := (c - a).cross(b - a).normalized()
+	var points := [a, b, c]
+	if normal.dot((a + b + c) / 3.0 - Vector3(0, EAVES * 0.5, 0)) < 0.0:
+		normal = -normal
+		points = [a, c, b]
+	for point: Vector3 in points:
 		tool.set_normal(normal)
 		tool.add_vertex(point)
 
@@ -99,11 +111,7 @@ func _shell() -> void:
 	for i in 4:
 		var a: Vector3 = corners[i]
 		var b: Vector3 = corners[(i + 1) % 4]
-		var normal := (b - a).cross(peak - a).normalized()
-		if normal.y < 0.0: normal = -normal
-		for point: Vector3 in [a, b, peak]:
-			tool.set_normal(normal)
-			tool.add_vertex(point)
+		_triangle(tool, a, b, peak)
 	var mesh := MeshInstance3D.new()
 	mesh.name = "Canvas"
 	mesh.mesh = tool.commit()
@@ -123,6 +131,7 @@ func _shell() -> void:
 	_wall(body, Vector3(-x, EAVES * 0.5, 0), Vector3(0.15, EAVES, z * 2.0))
 	_wall(body, Vector3(-(gap + side), EAVES * 0.5, -z), Vector3(side * 2.0, EAVES, 0.15))
 	_wall(body, Vector3(gap + side, EAVES * 0.5, -z), Vector3(side * 2.0, EAVES, 0.15))
+	_frame()
 	FITTINGS.box(self, Vector3(0, FLOOR_TOP * 0.5 - 0.1, 0), Vector3(x * 2.0, FLOOR_TOP + 0.2, z * 2.0), WOOD, true)
 	var light := OmniLight3D.new()
 	light.position = Vector3(0, 2.5, 0)
@@ -130,6 +139,22 @@ func _shell() -> void:
 	light.light_energy = 0.9
 	light.omni_range = 8.0
 	add_child(light)
+
+
+## A timber frame inside the canvas: a post in each corner, joined by beams along the top.
+func _frame() -> void:
+	var inset := BEAM * 0.5 + 0.04
+	var x := HALF_X - inset
+	var z := HALF_Z - inset
+	var height := EAVES - FLOOR_TOP
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			FITTINGS.box(self, Vector3(sx * x, FLOOR_TOP + height * 0.5, sz * z), Vector3(BEAM, height, BEAM), TIMBER)
+	var top := EAVES - BEAM * 0.5
+	for sz: float in [-1.0, 1.0]:
+		FITTINGS.box(self, Vector3(0, top, sz * z), Vector3(x * 2.0 + BEAM, BEAM, BEAM), TIMBER)
+	for sx: float in [-1.0, 1.0]:
+		FITTINGS.box(self, Vector3(sx * x, top, 0), Vector3(BEAM, BEAM, z * 2.0 + BEAM), TIMBER)
 
 
 ## Somepony keeps asking.
@@ -152,7 +177,7 @@ NOT
 a mascot"
 	text.font_size = 72
 	text.outline_size = 0
-	text.pixel_size = 0.0027
+	text.pixel_size = 0.0022
 	text.modulate = Color(0.32, 0.08, 0.08)
 	text.shaded = true
 	text.position = Vector3(0, 0, 0.01)
