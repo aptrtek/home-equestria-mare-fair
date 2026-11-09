@@ -1,19 +1,34 @@
 extends RefCounted
 ## Levels the ground under the crew's tent and balloon, feathered into the hillside. Terrain
 ## regions stream in and out and reload from disk, so main.gd calls apply() whenever one loads.
+## Road ground is never touched, so the road beside the site stays as the game made it.
 
-const FEATHER := 6.0
-## centre x, centre z, half width, half depth, height
+const FEATHER := 4.0
+const ROAD_TEXTURE := 1
+## centre x, centre z, half width, half depth, height, yaw (the same yaw as the thing on it)
 const PADS: Array[Array] = [
-	[220.0, -300.0, 6.5, 5.5, -3.6],
-	[232.0, -307.0, 4.5, 4.5, -1.7],
+	[187.0, -346.5, 5.5, 4.5, -1.7, 2.93],
+	[199.5, -345.0, 4.5, 4.5, -1.05, 0.0],
 ]
+
+
+## How far a point lies outside a pad's flat floor; 0 inside it.
+static func _outside(pad: Array, x: float, z: float) -> float:
+	var local := Vector2(x - float(pad[0]), z - float(pad[1])).rotated(float(pad[5]))
+	return Vector2(maxf(absf(local.x) - float(pad[2]), 0.0), maxf(absf(local.y) - float(pad[3]), 0.0)).length()
 
 
 static func height_at(x: float, z: float) -> float:
 	for pad: Array in PADS:
-		if absf(x - float(pad[0])) <= float(pad[2]) and absf(z - float(pad[1])) <= float(pad[3]): return float(pad[4])
+		if _outside(pad, x, z) <= 0.0: return float(pad[4])
 	return NAN
+
+
+static func _texture_at(data: Object, point: Vector3) -> int:
+	var bits := int(data.call("get_control", point))
+	if bits == 0xffffffff: return -1
+	var blend := float((bits >> 14) & 255) / 255.0
+	return (bits >> 22) & 31 if blend > 0.5 else (bits >> 27) & 31
 
 
 ## True once every pad's ground was in memory and has been levelled.
@@ -25,20 +40,19 @@ static func apply(terrain: Object) -> bool:
 	for pad: Array in PADS:
 		var cx := float(pad[0])
 		var cz := float(pad[1])
-		var hx := float(pad[2])
-		var hz := float(pad[3])
 		var target := float(pad[4])
 		if not data.call("has_regionp", Vector3(cx, 0, cz)):
 			complete = false
 			continue
-		var x := cx - hx - FEATHER
-		while x <= cx + hx + FEATHER:
-			var z := cz - hz - FEATHER
-			while z <= cz + hz + FEATHER:
+		var reach := ceilf(Vector2(float(pad[2]), float(pad[3])).length() + FEATHER)
+		var x := cx - reach
+		while x <= cx + reach:
+			var z := cz - reach
+			while z <= cz + reach:
 				var point := Vector3(x, 0, z)
-				var out := Vector2(maxf(absf(x - cx) - hx, 0.0), maxf(absf(z - cz) - hz, 0.0)).length()
+				var out := _outside(pad, x, z)
 				# A pad's feathered edge never touches another pad's flat floor.
-				if out < FEATHER and (out <= 0.0 or is_nan(height_at(x, z))):
+				if out < FEATHER and (out <= 0.0 or is_nan(height_at(x, z))) and _texture_at(data, point) != ROAD_TEXTURE:
 					var ground := float(data.call("get_height", point))
 					if is_finite(ground):
 						var blend: float = smoothstep(0.0, 1.0, out / FEATHER)

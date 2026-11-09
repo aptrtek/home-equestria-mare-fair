@@ -1,6 +1,7 @@
 {
   "mare_fair_tent": {
     "place_id": "house:mare_fair_tent",
-    "standard_setup": true
+    "standard_setup": true,
+    "label": "Mare Fair Tent"
   }
 }

@@ -31,6 +31,7 @@ const OWN_WEAR := "MareFairWear"
 var _poll := 0.0
 var _site_done := false
 var _site_terrain: Object
+var _world_terrain: Node
 var _sister_check := 0.0
 var _dressed: Dictionary = {}
 
@@ -121,6 +122,7 @@ func _keep_out_of_houses() -> void:
 		elif not tent_up and (houses as Dictionary).erase(id):
 			changed = true
 	if tent_up: _share_tent(game)
+	_keep_player_in_tent()
 	if not changed: return
 	population.set("_houses_version", int(population.get("_houses_version")) + 1)
 	for house: Node in get_tree().get_nodes_in_group("house_interiors"):
@@ -130,7 +132,8 @@ func _keep_out_of_houses() -> void:
 
 ## Terrain regions reload from disk as they stream, so the pads are redone whenever one arrives.
 func _level_site() -> void:
-	var world_terrain: Variant = WorldTerrain.instance
+	if not is_instance_valid(_world_terrain): _world_terrain = get_tree().root.find_child("WorldTerrain", true, false)
+	var world_terrain: Variant = _world_terrain
 	if not is_instance_valid(world_terrain): return
 	var terrain: Object = world_terrain.get("terrain")
 	if terrain == null: return
@@ -139,6 +142,14 @@ func _level_site() -> void:
 		_site_done = false
 		if world_terrain.has_signal("regions_loaded"): world_terrain.regions_loaded.connect(func(_regions: Variant) -> void: _site_done = false)
 	if not _site_done: _site_done = SITE.apply(terrain)
+
+
+## Population refreshes list residents only, so a married player is put back in the first bed.
+func _keep_player_in_tent() -> void:
+	for house: Node in get_tree().get_nodes_in_group("house_interiors"):
+		if not house.has_method("place_id") or str(house.call("place_id")) != TENT.PLACE_ID: continue
+		var sleepers: Array = house.get("_sleepers")
+		if house.has_meta("player_partner") and "player" not in sleepers: house.call("set_sleepers", sleepers + ["player"])
 
 
 ## While the player and Soirée are married, the tent is their shared home, with the first bed.
