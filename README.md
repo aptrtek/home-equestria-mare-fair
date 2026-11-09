@@ -38,10 +38,11 @@ Mods are programs, so only install them from people you trust.
 
 ## Meeting them
 
-They live at the **Mare Fair Tent**, marked on the map, by the road on the edge of town. The tent is striped like their balloon, which is parked beside it: a repainted copy of the town's balloon that stays put. Inside are three double beds, a lamp on the table, and a poster somepony keeps putting up.
+They live at the **Mare Fair Tent**, marked on the map, by the road on the edge of town. The tent is striped like their balloon, which is parked beside it: a repainted copy of the town's balloon that stays put. Inside are three double beds, a lamp on the table, and a poster somepony keeps putting up. They take no houses in Ponyville, so nopony who lives there is moved or has to share. While you are married to Soirée, the tent is your home too, and you share the first bed.
 
 ![The Mare Fair Tent and balloon by the road at night](docs/tent.jpg)
- They take no houses in Ponyville, so nopony who lives there is moved or has to share. While you are married to Soirée, the tent is your home too, and you share the first bed. From the console you can also bring one to you:
+
+From the console you can also bring one to you:
 
 ```
 spawn fair flyer
