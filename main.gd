@@ -28,6 +28,10 @@ const WEAR := {
 }
 const OUTLINE := "res://mods/mare_fair/accessories/outline.gdshader"
 const OWN_WEAR := "MareFairWear"
+## The mares' cutie marks for the map: one 96 px cell each, in IDS order (built from marks/<id>.png).
+const MAP_ICONS := "res://mods/mare_fair/marks/map_icons.png"
+const MAP_DATA := "res://world/ui/pony_map_data.gd"
+const MAP_ICON_CELL := 96
 var _poll := 0.0
 var _site_done := false
 var _site_terrain: Object
@@ -37,10 +41,39 @@ var _dressed: Dictionary = {}
 
 
 func _ready() -> void:
+	_add_map_icons()
 	add_child(preload("res://mods/mare_fair/hand_wear.gd").new())
 	Mods.on_node(PONY, _dress)
 	Mods.world_ready.connect(_on_world)
 	if is_instance_valid(Mods.game): _on_world(Mods.game)
+
+
+## The map draws each pony's icon from one shared atlas (world/ui/pony_map_data.gd). The mares'
+## marks go in a new row under it, and each gets an entry pointing there. Nothing is extended or
+## replaced; the map, journal and minimap all read the same two values.
+func _add_map_icons() -> void:
+	var data := load(MAP_DATA) as Script
+	if data == null or not ResourceLoader.exists(MAP_ICONS): return
+	data.call("load_icons")
+	var icons: Variant = data.get("icons")
+	var atlas: Variant = data.get("atlas")
+	if not icons is Dictionary or not atlas is Texture2D or (icons as Dictionary).has(IDS[0]): return
+	var sheet := (atlas as Texture2D).get_image()
+	var strip := (load(MAP_ICONS) as Texture2D).get_image()
+	if sheet == null or strip == null: return
+	if sheet.is_compressed(): sheet.decompress()
+	if strip.is_compressed(): strip.decompress()
+	strip.convert(sheet.get_format())
+	var top := sheet.get_height()
+	var grown := Image.create_empty(sheet.get_width(), top + MAP_ICON_CELL, false, sheet.get_format())
+	grown.blit_rect(sheet, Rect2i(Vector2i.ZERO, sheet.get_size()), Vector2i.ZERO)
+	grown.blit_rect(strip, Rect2i(Vector2i.ZERO, strip.get_size()), Vector2i(0, top))
+	data.set("atlas", ImageTexture.create_from_image(grown))
+	for i in IDS.size():
+		var identity := load("res://mods/mare_fair/ponies/%s.tres" % IDS[i])
+		var coat: Color = identity.get("coat_fill") if identity != null else Color.WHITE
+		(icons as Dictionary)[IDS[i]] = {"name": str(identity.get("display_name")) if identity != null else IDS[i],
+			"coat": [coat.r, coat.g, coat.b, 1.0], "rect": [i * MAP_ICON_CELL, top, MAP_ICON_CELL, MAP_ICON_CELL], "blank": false}
 
 
 func _process(delta: float) -> void:
