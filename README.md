@@ -42,6 +42,8 @@ They live at the **Mare Fair Tent**, marked on the map, by the road on the edge 
 
 ![The Mare Fair Tent and balloon by the road at night](docs/tent.jpg)
 
+On the map, the minimap and in the journal, each mare is marked with her own cutie mark, so you can find her wherever she has wandered off to.
+
 From the console you can also bring one to you:
 
 ```
