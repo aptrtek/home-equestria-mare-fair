@@ -1,9 +1,9 @@
 {
 	"id": "mare_fair",
 	"name": "Mare Fair",
-	"version": "1.4.2",
+	"version": "1.4.3",
 	"author": "aperture_tech",
 	"description": "The Mare Fair mascots visit Ponyville and camp by the road on the edge of town, in a big striped tent beside their parked balloon. Colours, bios, cutie marks and the mane and tail shapes follow the public convention pages. Hats and glasses are original models, and the balloon is the game's own, repainted. The Mare Fair mascots belong to Snowpity Inc. This is a free, unofficial fan mod.",
-	"game_version": "0.3.0-maredev",
+	"game_version": "0.3.1-maredev",
 	"entry": "res://mods/mare_fair/main.gd"
 }

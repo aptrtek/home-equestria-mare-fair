@@ -4,7 +4,7 @@ A mod for [Home: Equestria](https://github.com/homedevanon/home-equestria) that 
 [Mare Fair](https://marefair.org/mascots/) mascots to Ponyville. They camp by the road on the
 edge of town in a big striped tent beside their own parked balloon, keep daily schedules, and talk through the game's AI ponies.
 
-Built for game version `0.3.0-maredev`. With the mod switched off, Ponyville is unchanged.
+Built for game version `0.3.1-maredev`. With the mod switched off, Ponyville is unchanged.
 
 ![The five Mare Fair mascots in game](docs/lineup.png)
 
