@@ -28,6 +28,10 @@ const WEAR := {
 }
 const OUTLINE := "res://mods/mare_fair/accessories/outline.gdshader"
 const OWN_WEAR := "MareFairWear"
+## Fair Flyer's own hat is a sun hat. The game no longer has it on her (0.3.1 keeps the cowpony hat
+## for Applejack), so it would not tell her AI about it; this line says so while she wears it.
+const HAT_WEARER := "fair_flyer"
+const HAT_KNOWS := "\n\nYou are wearing your sun hat."
 ## The mares' cutie marks for the map: one 96 px cell each, in IDS order (built from marks/<id>.png).
 const MAP_ICONS := "res://mods/mare_fair/marks/map_icons.png"
 const MAP_DATA := "res://world/ui/pony_map_data.gd"
@@ -88,6 +92,7 @@ func _process(delta: float) -> void:
 	if _sister_check <= 0.0:
 		_sister_check = 2.0
 		_tell_sister()
+		_tell_hat()
 	for pony: Variant in _dressed.keys():
 		if not is_instance_valid(pony):
 			_dressed.erase(pony)
@@ -235,7 +240,9 @@ func _separate_glasses(game: Node, state: Dictionary) -> void:
 	state["glasses_separated"] = true
 
 
-## Draws each mare's own model while the game has its stand-in item on her.
+## Draws each mare's own model while she has her piece on: the game's stand-in item is on her, or
+## (from game 0.3.1, which keeps the cowpony hat for Applejack alone and takes it off everypony
+## else) she owns the piece and nopony has taken it off. hand_wear.gd reads "on" the same way.
 func _sync_wear() -> void:
 	var game: Node = Mods.game
 	if not is_instance_valid(game): return
@@ -247,21 +254,30 @@ func _sync_wear() -> void:
 		if who == null or not WEAR.has(str(who.get("id"))): continue
 		var skeleton: Variant = pony.get("hair_skeleton")
 		if not skeleton is Skeleton3D: continue
-		var row: Array = WEAR[str(who.get("id"))]
+		var id := str(who.get("id"))
+		var row: Array = WEAR[id]
 		var stand_in: Node3D
 		for node: Node in (pony as Node).find_children("Wear_" + str(row[0]), "", true, false):
 			if not node.is_queued_for_deletion(): stand_in = node as Node3D
 		var own := (skeleton as Node).get_node_or_null(OWN_WEAR)
-		if stand_in == null:
+		if stand_in == null and not _owns_and_wears(game, id, str(row[0])):
 			if own != null: own.queue_free()
 			continue
-		stand_in.visible = false
+		if stand_in != null: stand_in.visible = false
 		if own == null: _attach_wear(skeleton, str(row[1]))
 
 
-func _attach_wear(skeleton: Skeleton3D, path: String) -> void:
+## True when the wardrobe has given her `kind` and it has not been taken off.
+func _owns_and_wears(game: Node, id: String, kind: String) -> bool:
+	var wardrobe: Variant = game.get("wardrobe")
+	if not is_instance_valid(wardrobe): return false
+	if "wear:%s:0" % kind not in (wardrobe.call("gifts").get(id, []) as Array): return false
+	return kind not in (wardrobe.call("taken_off").get(id, []) as Array)
+
+
+func _attach_wear(skeleton: Skeleton3D, path: String) -> Node:
 	var bone := skeleton.find_bone("mHead")
-	if bone < 0 or not ResourceLoader.exists(path): return
+	if bone < 0 or not ResourceLoader.exists(path): return null
 	var attachment := BoneAttachment3D.new()
 	attachment.name = OWN_WEAR
 	attachment.bone_name = "mHead"
@@ -280,6 +296,23 @@ func _attach_wear(skeleton: Skeleton3D, path: String) -> void:
 			var material: Material = mesh.mesh.surface_get_material(surface).duplicate()
 			material.next_pass = line
 			mesh.set_surface_override_material(surface, material)
+	return attachment
+
+
+## Fair Flyer knows she has her sun hat on only while she does (taken off by hand or by asking her,
+## the line goes).
+func _tell_hat() -> void:
+	var game: Node = Mods.game
+	if not is_instance_valid(game): return
+	var director: Variant = game.get("director")
+	if not is_instance_valid(director): return
+	var characters: Variant = director.get("characters")
+	if not characters is Dictionary or not (characters as Dictionary).has(HAT_WEARER): return
+	var row: Dictionary = characters[HAT_WEARER]
+	var prompt := str(row.get("prompt", ""))
+	var wearing := _owns_and_wears(game, HAT_WEARER, str(WEAR[HAT_WEARER][0]))
+	if wearing and not prompt.contains(HAT_KNOWS): row["prompt"] = prompt + HAT_KNOWS
+	elif not wearing and prompt.contains(HAT_KNOWS): row["prompt"] = prompt.replace(HAT_KNOWS, "")
 
 
 ## Matinée knows about the marriage only while it is true in the game, however it came about.
