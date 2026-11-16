@@ -1,6 +1,7 @@
 extends Node
-## Parks the Mare Fair balloon once a world is up, and adds the five mascots to an
-## existing save the first time. A fresh world already has them from the merged roster.
+## Parks the Mare Fair balloon once a world is up, and makes sure the five mascots live in it.
+## A fresh world already has them from the merged roster; an existing save gets any who are
+## missing each time it loads (see _enroll).
 
 const BALLOON := preload("res://mods/mare_fair/balloon.gd")
 const TENT := preload("res://mods/mare_fair/tent.gd")
@@ -356,9 +357,14 @@ func _start_marriage(game: Node) -> void:
 
 func _starts_married() -> bool:
 	if str(AI_CONFIG.load_config().get_value("player_name", "")).strip_edges() != HUSBAND: return false
+	return bool(_settings().get("start_married_to_soiree", true))
+
+
+## user://mods/data/mare_fair/settings.json, or {} when there is none.
+func _settings() -> Dictionary:
 	var path := Mods.data_folder("mare_fair").path_join("settings.json")
 	var settings: Variant = JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else null
-	return bool(settings.get("start_married_to_soiree", true)) if settings is Dictionary else true
+	return settings if settings is Dictionary else {}
 
 
 func _park(game: Node) -> void:
@@ -368,20 +374,23 @@ func _park(game: Node) -> void:
 	TENT.attach(town)
 
 
+## Each time a world loads, any of the five who isn't in its population is added to Ponyville, so
+## dropping the mod into an existing save brings them in, and so does a save that lost them (the
+## game forgets a pony it can't find whenever it loads the list without the mod). Only the missing
+## ones are touched. To keep them out, put {"add_to_worlds": false} in
+## user://mods/data/mare_fair/settings.json.
 func _enroll(game: Node) -> void:
+	if not bool(_settings().get("add_to_worlds", true)): return
 	var population: Node = game.get("population")
 	if population == null: return
 	var config: Object = population.get("config")
 	if config == null or not config.has_method("assign"): return
-	var state: Dictionary = Mods.state("mare_fair")
-	if bool(state.get("enrolled", false)): return
 	var assignments: Dictionary = config.get("assignments")
-	var changed := false
+	var added: Array[String] = []
 	for id: String in IDS:
 		if not assignments.has(id):
 			config.assign(id, "ponyville")
-			changed = true
-	if changed and config.has_method("save_file"):
-		config.save_file(str(population.get("config_path")))
-	state["enrolled"] = true
-	Mods.save_changed()
+			added.append(id)
+	if added.is_empty(): return
+	if config.has_method("save_file"): config.save_file(str(population.get("config_path")))
+	print("[mare_fair] added to this world's Ponyville: ", ", ".join(added))
